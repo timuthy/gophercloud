@@ -1,6 +1,9 @@
 package listeners
 
 import (
+	"encoding/json"
+	"strconv"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/l7policies"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
@@ -80,6 +83,33 @@ type Listener struct {
 
 	// A list of IPv4, IPv6 or mix of both CIDRs
 	AllowedCIDRs []string `json:"allowed_cidrs"`
+}
+
+func (l *Listener) UnmarshalJSON(b []byte) error {
+	type tmp Listener
+	var s struct {
+		tmp
+		InsertHeaders map[string]interface{} `json:"insert_headers"`
+	}
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	*l = Listener(s.tmp)
+	for k, v := range s.InsertHeaders {
+		if l.InsertHeaders == nil {
+			l.InsertHeaders = make(map[string]string)
+		}
+		switch t := v.(type) {
+		case string:
+			l.InsertHeaders[k] = t
+		case bool:
+			l.InsertHeaders[k] = strconv.FormatBool(t)
+		}
+	}
+
+	return nil
 }
 
 type Stats struct {
